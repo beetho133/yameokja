@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mapper.BoardMapper">
+
+	<select id="totalBoardCount" resultType="int" parameterType="SearchVO">
+		SELECT 
+			COUNT(*) 
+		FROM
+			BOARD_TB
+		<if test="searchArticle == 'bTitle'">
+			WHERE B_TITLE LIKE CONCAT('%', #{searchKeywordString}, '%')
+<!-- 				WHERE B_TITLE = #{searchKeywordString} -->
+		</if>
+		<if test="searchArticle == 'bContent'">
+			WHERE B_CONTENT LIKE CONCAT('%', #{searchKeywordString}, '%')
+		</if>
+		<if test="searchArticle == 'bWriter'">
+			WHERE B_ID LIKE CONCAT('%', #{searchKeywordString}, '%')
+		</if>
+		<if test="searchArticle == 'bLocation'">
+			WHERE B_LOCATION LIKE CONCAT('%', #{searchKeywordString}, '%')
+		</if>
+		<if test="searchArticle == 'bMatchCheck'">
+			WHERE B_MATCH_CHECK = #{searchKeywordInt}
+		</if>		
+		<if test="searchArticle == 'sex'">
+			WHERE B_ID IN(SELECT ID FROM MEMBER_TB WHERE SEX = #{searchKeywordInt})
+		</if>
+		<if test="searchArticle == 'bTime'">
+			WHERE B_TIME BETWEEN STR_TO_DATE(#{startDate}, '%Y-%m-%d %H:%i') AND STR_TO_DATE(#{endDate}, '%Y-%m-%d %H:%i')
+		</if>
+		<if test="searchArticle == 'myBoard'">
+			WHERE B_ID = #{searchKeywordString}
+		</if>
+		<if test="searchArticle == 'myAsk'">
+			WHERE B_NUM IN(SELECT C_BOARD_NUM FROM COMMENT_TB WHERE C_ID = #{searchKeywordString} AND C_ASK = 1)
+		</if>
+		<if test="searchArticle == 'myAccept'">
+			WHERE B_NUM IN(SELECT C_BOARD_NUM FROM COMMENT_TB WHERE C_ID = #{searchKeywordString} AND C_ACCEPT = 1)
+		</if>
+			
+	</select>
+
+	<select id="totalBoardList" resultMap="boardResultMap" parameterType="SearchVO">
+
+		SELECT B_NUM, B_ID, b_title, b_content, b_write_date, b_read_count, b_address, b_location, b_time, b_match_check
+		FROM BOARD_TB
+
+		<if test="search.searchArticle == 'bTitle'">
+			WHERE B_TITLE LIKE CONCAT('%', #{search.searchKeywordString}, '%')
+<!--				WHERE B_TITLE = #{search.searchKeywordString} -->
+		</if>
+		<if test="search.searchArticle == 'bContent'">
+			WHERE B_CONTENT LIKE CONCAT('%', #{search.searchKeywordString}, '%')
+		</if>
+		<if test="search.searchArticle == 'bWriter'">
+			WHERE B_ID LIKE CONCAT('%', #{search.searchKeywordString}, '%')
+		</if>
+		<if test="search.searchArticle == 'bLocation'">
+			WHERE B_LOCATION LIKE CONCAT('%', #{search.searchKeywordString}, '%')
+		</if>
+		<if test="search.searchArticle == 'bMatchCheck'">
+			WHERE B_MATCH_CHECK = #{search.searchKeywordInt}
+		</if>
+		<if test="search.searchArticle == 'sex'">
+			WHERE B_ID IN(SELECT ID FROM MEMBER_TB WHERE SEX = #{search.searchKeywordInt})
+		</if>
+		<if test="search.searchArticle == 'bTime'">
+			WHERE B_TIME BETWEEN STR_TO_DATE(#{search.startDate}, '%Y-%m-%d %H:%i') AND STR_TO_DATE(#{search.endDate}, '%Y-%m-%d %H:%i')
+		</if>
+		<if test="search.searchArticle == 'myBoard'">
+			WHERE B_ID = #{search.searchKeywordString}
+		</if>
+		<if test="search.searchArticle == 'myAsk'">
+			WHERE B_NUM IN(SELECT C_BOARD_NUM FROM COMMENT_TB WHERE C_ID = #{search.searchKeywordString} AND C_ASK = 1)
+		</if>
+		<if test="search.searchArticle == 'myAccept'">
+			WHERE B_NUM IN(SELECT C_BOARD_NUM FROM COMMENT_TB WHERE C_ID = #{search.searchKeywordString} AND C_ACCEPT = 1)
+		</if>	
+
+		ORDER BY B_NUM DESC
+		LIMIT #{startRow}, #{rowCount}
+
+	</select>
+	
+	<insert id="boardWrite" parameterType="BoardVO"
+		useGeneratedKeys="true" keyProperty="bNum">
+		INSERT INTO BOARD_TB
+			(B_ID, B_PW, B_TITLE, B_CONTENT, B_ADDRESS, B_LOCATION, B_TIME) 
+		VALUES
+			(#{bWriter}, #{bPw}, #{bTitle}, #{bContent}, #{bAddress}, #{bLocation}, #{bTime})
+	</insert>
+	
+	<select id="boardContent" resultMap="boardResultMap">
+		SELECT
+			B_NUM, B_ID, B_TITLE, B_CONTENT, B_WRITE_DATE, B_READ_COUNT, B_ADDRESS, B_LOCATION, B_TIME, B_MATCH_CHECK
+		FROM 
+			BOARD_TB
+		WHERE B_NUM = #{bNum}		
+	</select>
+	
+	<select id="searchSex" resultType="int">
+		SELECT
+			SEX
+		FROM
+			MEMBER_TB
+		WHERE
+			ID = #{bWriter} 		
+	</select>
+	
+	<update id="matchCheck" parameterType="BoardVO">
+		UPDATE
+			BOARD_TB
+		SET
+			B_MATCH_CHECK = #{bMatchCheck}
+		WHERE 
+			B_NUM = #{bNum}	
+	</update>
+	
+	<select id="boardCheckPw" resultType="String">
+		SELECT
+			B_PW
+		FROM
+			BOARD_TB
+		WHERE
+			B_NUM = #{bNum}	
+	</select>
+	
+	<update id="boardModify" parameterType="BoardVO">
+		UPDATE
+			BOARD_TB
+		SET
+			B_PW = #{bPw}, B_TITLE = #{bTitle}, B_CONTENT = #{bContent}, B_WRITE_DATE = NOW(), 
+			B_ADDRESS = #{bAddress}, B_LOCATION = #{bLocation}, B_TIME = #{bTime}
+		WHERE
+			B_NUM = #{bNum}	
+	</update>
+	
+	<select id="noReadUpBoardContent" resultMap="boardResultMap">
+		SELECT
+			*
+		FROM 
+			BOARD_TB
+		WHERE B_NUM = #{bNum}	
+	</select>
+	
+	<delete id="boardDelete">
+		DELETE FROM BOARD_TB WHERE B_NUM = #{bNum}
+	</delete>
+	
+	<update id="upReadCount">
+		UPDATE 
+			BOARD_TB
+		SET 
+			B_READ_COUNT = B_READ_COUNT + 1 
+		WHERE 
+			B_NUM = #{bNum}
+	</update>
+
+
+
+	<resultMap type="BoardVO" id="boardResultMap">
+		<result column="B_NUM" property="bNum" />
+		<result column="B_ID" property="bWriter" />
+		<result column="B_PW" property="bPw" />
+		<result column="B_TITLE" property="bTitle" />
+		<result column="B_CONTENT" property="bContent" />
+		<result column="B_WRITE_DATE" property="bWriteDate" />
+		<result column="B_READ_COUNT" property="bReadCount" />
+		<result column="B_ADDRESS" property="bAddress" />
+		<result column="B_LOCATION" property="bLocation" />
+		<result column="B_TIME" property="bTime" />
+		<result column="B_MATCH_CHECK" property="bMatchCheck" />
+
+	</resultMap>
+
+</mapper>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mapper.CommentMapper">
+
+	<select id="commentList" resultMap="comResultMap">
+		SELECT * FROM COMMENT_TB 
+		WHERE C_BOARD_NUM = #{cBoardNum}
+		ORDER BY C_SUB ASC, C_SUB_STEP ASC 
+	</select>
+	
+	<insert id="commentWrite" parameterType="CommentVO"
+		useGeneratedKeys="true" keyProperty="cNum">
+		
+		<choose>
+			<when test="cNum == -1">
+				INSERT INTO COMMENT_TB
+					(C_ID, C_BOARD_NUM, C_CONTENT, C_SUB, C_ASK) 
+				VALUES
+					(#{cWriter}, #{cBoardNum}, #{cContent}, #{cSub}, #{cAsk})		
+			</when>
+			<otherwise>
+				INSERT INTO COMMENT_TB
+					(C_ID, C_BOARD_NUM, C_CONTENT, C_SUB, C_SUB_STEP) 
+				VALUES
+					(#{cWriter}, #{cBoardNum}, #{cContent}, #{cSub}, #{cSubStep})
+			</otherwise>
+		</choose>	
+	
+	
+	</insert>
+	
+	<select id="nextCommentNum" resultType="int">
+		
+		SELECT AUTO_INCREMENT FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA = 'PROJECT' AND TABLE_NAME = 'COMMENT_TB'
+
+	</select>
+	
+	<select id="maxCommentSubStep" resultType="int">
+	
+<!-- BOARDNUM 필요 없음 -->
+	
+		SELECT
+			MAX(C_SUB_STEP)
+		FROM
+			COMMENT_TB
+		WHERE
+			C_BOARD_NUM = #{cBoardNum} AND C_SUB = #{cSub}				
+	
+	</select>
+	
+	<select id="commentWriteNum" resultType="int" parameterType="CommentVO">
+	
+		SELECT 
+			C_NUM 
+		FROM 
+			COMMENT_TB
+		WHERE 
+			C_SUB_STEP = (SELECT MAX(C_SUB_STEP) FROM COMMENT_TB WHERE C_SUB = #{cSub})
+			AND
+			C_SUB = #{cSub}	
+	
+	</select>
+	
+	<update id="commentUpdate" parameterType="CommentVO">
+		UPDATE
+			COMMENT_TB
+		SET
+			C_CONTENT = #{cContent}, C_WRITE_DATE = NOW(), C_ASK = #{cAsk}
+		WHERE
+			C_NUM = #{cNum}	
+	</update>
+	
+	<delete id="commentDelete">
+		DELETE FROM COMMENT_TB WHERE C_NUM = #{cNum}
+	</delete>
+	
+	<update id="accept">
+		UPDATE
+			COMMENT_TB
+		SET
+			C_ACCEPT = #{cAccept}
+		WHERE
+			C_NUM = #{cNum}
+	
+	</update>
+	
+	<select id="acceptList" resultMap="memberResultMap">
+	
+		SELECT
+			ID, NAME, SEX, BIRTH_DATE, PHONE, EMAIL
+		FROM 
+			MEMBER_TB
+		WHERE
+			ID = (SELECT B_ID FROM BOARD_TB WHERE B_NUM = #{cBoardNum}) OR 
+			ID IN(SELECT C_ID FROM COMMENT_TB WHERE C_BOARD_NUM = #{cBoardNum} AND C_ACCEPT = 1) 
+	
+	</select>
+	
+	<select id="checkAsk" resultType="int" parameterType="CommentVO">
+		
+		SELECT 
+			COUNT(*) 
+		FROM
+			COMMENT_TB
+		WHERE
+			C_BOARD_NUM = #{cBoardNum} AND C_ID = #{cWriter} AND C_ASK = 1	
+	
+	</select>
+	
+	<select id="checkSub" resultType="int" parameterType="int">
+	
+		SELECT
+			C_SUB
+		FROM
+			COMMENT_TB
+		WHERE
+			C_NUM = #{cNum}		
+	
+	</select>
+	
+	<delete id="commentDeleteAll">
+		DELETE FROM COMMENT_TB WHERE C_SUB = #{cNum}
+	</delete>
+
+	<resultMap type="CommentVO" id="comResultMap">
+		<result column="C_NUM" property="cNum" />
+		<result column="C_ID" property="cWriter"/>
+		<result column="C_BOARD_NUM" property="cBoardNum"/>
+		<result column="C_CONTENT" property="cContent" />
+		<result column="C_WRITE_DATE" property="cWriteDate" />
+		<result column="C_SUB" property="cSub" />
+		<result column="C_SUB_STEP" property="cSubStep" />
+		<result column="C_ASK" property="cAsk" />
+		<result column="C_ACCEPT" property="cAccept" />
+	</resultMap>
+	
+	<resultMap type="MemberVO" id="memberResultMap">
+		<result column="ID" property="id" />
+		<result column="PW" property="pw" />
+		<result column="NAME" property="name" />
+		<result column="SEX" property="sex" />
+		<result column="BIRTH_DATE" property="birthDate" />
+		<result column="PHONE" property="phone" />
+		<result column="EMAIL" property="email" />
+	</resultMap>
+
+</mapper>
